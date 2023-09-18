@@ -81,23 +81,68 @@ app.post('/api/users/:_id/exercises', async (req, res) => {
     const user = await User.findById(id)
     if (!user) {
       res.send('User not found')
-    } else {
-      const model = new Exercise({
-        _id: new mongoose.Types.ObjectId(),
-        user_id: user._id,
-        description,
-        duration,
-        date: date ? new Date(date) : new Date()
-      })
-      const exercise = await model.save()
-      res.json({
-        _id: user._id,
-        username: user.username,
-        description: exercise.description,
-        duration: exercise.duration,
-        date: new Date(date).toDateString()
-      })
+      return
     }
+
+    const model = new Exercise({
+      _id: new mongoose.Types.ObjectId(),
+      user_id: user._id,
+      description,
+      duration,
+      date: date ? new Date(date) : new Date()
+    })
+
+    const exercise = await model.save()
+
+    res.json({
+      _id: user._id,
+      username: user.username,
+      description: exercise.description,
+      duration: exercise.duration,
+      date: new Date(date).toDateString()
+    })
+  } catch (err) {
+    res.send(`Bad request. Error: ${err}`)
+  }
+})
+
+
+app.get('/api/users/:_id/logs', async (req, res) => {
+  const { from, to, limit } = req.query
+  const id = req.params._id
+  try {
+    const user = await User.findById(id)
+    if (!user) {
+      res.send('User not found')
+      return
+    }
+
+    let obj = {}
+    if (from) 
+      obj["$gte"] = new Date(from)
+
+    if (to) 
+      obj["$lte"] = new Date(to)
+
+    let filter = { user_id: id }
+
+    if (from || to) 
+      filter.date = obj
+
+    const exercises = await Exercise.find(filter).limit(+limit ?? 1000)
+
+    const logs = exercises.map((elem) => ({
+      description: elem.description,
+      duration: elem.duration,
+      date: elem.date.toDateString()
+    }))
+
+    res.json({
+      username: user.username,
+      count: exercises.length,
+      _id: user._id,
+      log: logs
+    })
   } catch (err) {
     res.send(`Bad request. Error: ${err}`)
   }
