@@ -5,6 +5,7 @@ const app = express()
 
 const mongoose = require("mongoose") // <-- Import the mongoose module
 const cors = require('cors')
+const { use } = require('express/lib/application')
 
 
 app.use(cors())
@@ -72,7 +73,35 @@ app.post('/api/users', async (req, res) => {
 })
 
 
+app.post('/api/users/:_id/exercises', async (req, res) => {
+  const id = req.params._id
+  const { description, duration, date } = req.body
 
+  try {
+    const user = await User.findById(id)
+    if (!user) {
+      res.send('User not found')
+    } else {
+      const model = new Exercise({
+        _id: new mongoose.Types.ObjectId(),
+        user_id: user._id,
+        description,
+        duration,
+        date: date ? new Date(date) : new Date()
+      })
+      const exercise = await model.save()
+      res.json({
+        _id: user._id,
+        username: user.username,
+        description: exercise.description,
+        duration: exercise.duration,
+        date: new Date(date).toDateString()
+      })
+    }
+  } catch (err) {
+    res.send(`Bad request. Error: ${err}`)
+  }
+})
 
 const listener = app.listen(process.env.PORT || 3000, () => {
   console.log('Your app is listening on http://localhost:' + listener.address().port)
